@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: API Sketch
+Globals:
+  Function:
+    Runtime: provided.al2023
+    Architectures:
+    - arm64
+    MemorySize: 768
+    Timeout: 10
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: sam-api-sketch
+    Description: Sketching out some SAM / API Gateway stuff in Golang
+    Author: Aurelia Peters
+    SemanticVersion: 1.0.8
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value:
+      Fn::GetAtt:
+      - HttpApi
+      - ApiEndpoint
+Parameters:
+  pAuth0Audience:
+    Description: Auth0 authorization audience
+    Type: String
+  pAuth0Domain:
+    Description: Auth0 authorization domain
+    Type: String
+Resources:
+  HelloLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://aws-sam-cli-managed-default-samclisourcebucket-6tpexgfih4uv/c736ed6d35cda61685e8ea8468de1a16
+      Handler: bootstrap
+      Events:
+        CatchAll:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: HttpApi
+            Path: /hello/{name}
+            Method: GET
+    Metadata:
+      SamResourceId: HelloLambda
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      FailOnWarnings: true
+      DefinitionBody:
+        openapi: 3.0.3
+        info:
+          version: 1.0.0
+          title: API sketch
+          description: Sketching out API stuff
+        paths:
+          /hello/{name}:
+            get:
+              summary: Say hello
+              operationId: getHelloName
+              responses:
+                2XX:
+                  description: Says hello
+                4XX:
+                  description: Error
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                payloadFormatVersion: '2.0'
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HelloLambda.Arn}/invocations
+        x-amazon-apigateway-request-validators:
+          all:
+            validateRequestBody: true
+            validateRequestParameters: true
+          params-only:
+            validateRequestBody: false
+            validateRequestParameters: true
+          body-only:
+            validateRequestBody: true
+            validateRequestParameters: false
+    Metadata:
+      SamResourceId: HttpApi
