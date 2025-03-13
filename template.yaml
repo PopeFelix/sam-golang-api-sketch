@@ -32,7 +32,7 @@ Resources:
   HelloLambda:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./cmd/functions/hello
+      CodeUri: ./cmd/functions/hello/bootstrap
       Handler: bootstrap
       Events:
         CatchAll:
@@ -58,21 +58,24 @@ Resources:
         paths:
           /hello/{name}:
             get:
+              x-amazon-apigateway-integration:
+                $ref: "#/components/x-amazon-apigateway-integrations/getHelloName"
               summary: Say hello
               operationId: getHelloName
+              parameters:
+                - in: path
+                  name: name
+                  schema:
+                    type: string
+                  required: true
+                  description: Who do we say hello to?
               responses:
                 2XX:
                   description: Says hello
                 4XX:
                   description: Error 
-              x-amazon-apigateway-integration:
-                httpMethod: POST 
-                type: aws_proxy
-                payloadFormatVersion: "2.0"
-                uri: 
-                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HelloLambda.Arn}/invocations
-        components:
-          # Uncomment this, the "security:" section above, and the "pJwtAuthorizer" parameters to use an AWS JWT authorizer (for use with, e.g., Auth0)
+        # Uncomment this, the "security:" section above, and the "pJwtAuthorizer" parameters to use an AWS JWT authorizer (for use with, e.g., Auth0)
+        # components:
           # securitySchemes:                                                                                                                                                                                                                                                                          
           #   JwtAuthorizer:                                                                                                                                                                                                                                                                   
           #     type: "oauth2"                                                                                                                                                                                                                                                                        
@@ -96,3 +99,12 @@ Resources:
           body-only:
             validateRequestBody: true
             validateRequestParameters: false
+        components:
+          x-amazon-apigateway-integrations:
+            getHelloName: 
+              httpMethod: POST 
+              type: aws_proxy
+              payloadFormatVersion: "2.0"
+              uri: 
+                Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HelloLambda.Arn}/invocations
+            
